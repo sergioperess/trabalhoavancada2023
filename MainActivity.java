@@ -42,8 +42,18 @@ class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Solicitar atualizações de localização
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        // Solicitar atualizações de localização em uma thread separada
+        Thread locationThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare(); // Preparar o Looper para a thread
+
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+
+                Looper.loop(); // Iniciar o loop do Looper
+            }
+        });
+        locationThread.start(); // Iniciar a thread de localização
 
         // Inicializar o handler para exibir os valores atualizados
         handler = new Handler(Looper.getMainLooper());
@@ -52,17 +62,26 @@ class MainActivity extends AppCompatActivity {
     private final LocationListener locationListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
-            // Ler os dados de localização
-            Localizacao localizacao = new Localizacao(location.getLatitude(); location.getLongitude());
+            // Ler os dados de localização em uma thread separada
+            Thread updateThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // Ler os dados de localização
+                    Localizacao localizacao = new Localizacao(location.getLatitude(), location.getLongitude());
 
-            // Atualizar os valores do carro com base na localização
-            atualizarCarro(carro, localizacao);
+                    // Atualizar os valores do carro com base na localização
+                    atualizarCarro(carro, localizacao);
 
-            // Exibir os valores atualizados
-            exibirValores(carro);
-        }
-
-        private void exibirValores(Carro carro) {
+                    // Exibir os valores atualizados no handler principal
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            exibirValores(carro);
+                        }
+                    });
+                }
+            });
+            updateThread.start(); // Iniciar a thread de atualização
         }
 
         @Override
@@ -85,12 +104,6 @@ class MainActivity extends AppCompatActivity {
         carro.setLocalizacao(localizacao);
 
         // Atualizar outros valores, como combustível, velocidade e tempo de deslocamento
-        // Aqui você pode implementar a lógica específica para atualizar esses valores com base na localização
-
+       
         // Exemplo de atualização do combustível
-        Combustivel combustivel = carro.getCombustivel();
-        combustivel.setQuantidade(combustivel.getQuantidade() - 0.1); // Reduzir a quantidade de combustível em 0.1 litro
-
-        // Exemplo de atualização da velocidade
-        double novaVelocidade = Math.random() * 100; // Gerar uma velocidade aleatória entre 0 e 100 km/h
-        carro.setVelocidade(novaVelocidade);
+        Combustivel combustivel = carro.getComb
